@@ -9,6 +9,22 @@ export default {
   }
 };
 
+// Extract first two octets: "123.45.67.89" → "123.45"
+function getPrefix(ip) {
+  if (!ip) return "";
+  return ip.split(".").slice(0, 2).join(".");
+}
+
+// Validate if prefix matches any in VALID_IP (multi-line)
+function isValidPrefix(ip, env) {
+  const prefix = getPrefix(ip);
+  const validList = env.VALID_IP.split("\n")
+    .map(v => v.trim())
+    .filter(v => v.length > 0);
+
+  return validList.includes(prefix);
+}
+
 async function updateGatewayIP(env) {
   const hostname = "qcy.ddns.net";
   const timestamp = new Date().toISOString();
@@ -34,7 +50,14 @@ async function updateGatewayIP(env) {
     return message;
   }
 
-  // 2️⃣ Fetch current Cloudflare Gateway location IP
+  // 2️⃣ Check if DDNS IP prefix is valid
+  if (!isValidPrefix(ddnsIP, env)) {
+    message = `⚠️ DDNS IP ${ddnsIP} is NOT in allowed prefixes.\nUpdate blocked.`;
+    await sendTelegram(env, message);
+    return message;
+  }
+
+  // 3️⃣ Fetch current Cloudflare Gateway location IP
   let cloudflareIP;
   try {
     const resp = await fetch(
@@ -52,7 +75,6 @@ async function updateGatewayIP(env) {
       throw new Error(`Unable to fetch current Cloudflare IP: ${JSON.stringify(result)}`);
     }
 
-    // Extract IP without /32 suffix if present
     cloudflareIP = result.result.networks[0].network.split("/")[0];
 
   } catch (err) {
@@ -61,13 +83,13 @@ async function updateGatewayIP(env) {
     return message;
   }
 
-  // 3️⃣ Compare IPs
+  // 4️⃣ Compare IPs
   if (ddnsIP === cloudflareIP) {
     message = `ℹ️ No update needed. DDNS IP (${ddnsIP}) matches Cloudflare Gateway IP.`;
-    return message; // no Telegram notification needed if you prefer silence
+    return message;
   }
 
-  // 4️⃣ Update Cloudflare IP because they differ
+  // 5️⃣ Update Cloudflare IP because they differ AND prefix is allowed
   try {
     const updateResp = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/gateway/locations/${env.LOCATION_ID}`,
@@ -88,7 +110,7 @@ async function updateGatewayIP(env) {
     if (updateResp.ok) {
       message = `🛜 Updated Gateway IP from ${cloudflareIP} → ${ddnsIP}`;
     } else {
-      message = `⚠️ Failed to update  Gateway IP!\n${JSON.stringify(updateResult)}`;
+      message = `⚠️ Failed to update Gateway IP!\n${JSON.stringify(updateResult)}`;
     }
 
     await sendTelegram(env, message);
