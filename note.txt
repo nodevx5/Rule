@@ -1,0 +1,3 @@
+Update Location IP v4.js is working and currently used in worker.
+
+Update Location IP v5.js is new with mod to avoid accidental run when someone visits the url
