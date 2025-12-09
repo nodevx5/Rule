@@ -94,7 +94,7 @@ async function updateGatewayIP(env) {
     const updateResp = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/gateway/locations/${env.LOCATION_ID}`,
       {
-        method: "PATCH",
+        method: "PUT",
         headers: {
           Authorization: `Bearer ${env.CF_API_TOKEN}`,
           "Content-Type": "application/json"
