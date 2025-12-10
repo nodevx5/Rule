@@ -3,3 +3,5 @@ Update Location IP v4.js is working and currently used in worker.
 Update Location IP v5.js is new with mod to avoid accidental run when someone visits the url
 
 Update Location IP v6.js is wrapped in export function to be called by worker.js
+
+routerdns.js is the new working js that support dynamic worker.js
